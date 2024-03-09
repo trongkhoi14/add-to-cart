@@ -20,6 +20,14 @@ const App = () => {
       .then((data) => {
         const updatedShopItems = data.shoes.map((item) => {
           const inCart = storedCartItems ? storedCartItems.some((cartItem) => cartItem.id === item.id) : false;
+          if(inCart) {
+            const animationTarget = document.getElementById(`addButton${item.id}`);
+            gsap.to(animationTarget, {
+              width: 46,
+              duration: 0.2,
+              ease: "power4",
+            });
+          }
           return { ...item, inCart };
         });
         setShopItems(updatedShopItems); 
