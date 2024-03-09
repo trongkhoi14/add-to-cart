@@ -1,16 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import gsap from 'gsap';
+import React, { useState, useEffect } from "react";
+// import axios from "axios";
+import gsap from "gsap";
+import "./App.css";
 
 const App = () => {
   const [shopItems, setShopItems] = useState([]);
   const [cartItems, setCartItems] = useState([]);
 
   useEffect(() => {
-    axios
-      .get("https://s3-us-west-2.amazonaws.com/s.cdpn.io/1315882/shoes.json")
-      .then((res) => {
-        setShopItems(res.data.shoes);
+    // Retrieve cart items from localStorage when the component mounts
+    const storedCartItems = JSON.parse(localStorage.getItem("cartItems"));
+    if (storedCartItems) {
+      setCartItems(storedCartItems);
+    }
+
+    // axios
+    //   .get("/api/v1/products")
+    //   .then((res) => {
+    //     setShopItems(res.data.shoes);
+    //   });
+    fetch("/data/shoes.json")
+      .then((response) => response.json())
+      .then((data) => {
+        setShopItems(data.shoes);
+      })
+      .catch((error) => {
+        console.error("Error fetching products:", error);
       });
   }, []);
 
@@ -20,75 +35,142 @@ const App = () => {
       const newItem = { ...item, count: 1 };
       setCartItems([...cartItems, newItem]);
 
+      // Save updated cart items to localStorage
+      localStorage.setItem(
+        "cartItems",
+        JSON.stringify([...cartItems, newItem])
+      );
+
       const animationTarget = document.getElementById(`addButton${item.id}`);
       gsap.to(animationTarget, {
         width: 46,
-        duration: 0.8,
-        ease: "power4"
+        duration: 1,
+        ease: "power4",
       });
     }
     setTimeout(() => {
-      document.getElementById('cartItems').scrollTop = document.getElementById('cartItems').scrollHeight;
+      document.getElementById("cartItems").scrollTop =
+        document.getElementById("cartItems").scrollHeight;
     });
   };
 
   const decrement = (item) => {
-    item.count--;
-    const targetShopItem = shopItems.find(shopItem => shopItem.id === item.id);
-    if (item.count === 0) {
-      const animationTarget = document.getElementById(`addButton${targetShopItem.id}`);
-      gsap.to(animationTarget, {
-        width: 136,
-        duration: 0.8,
-        ease: "power4"
-      });
-      targetShopItem.inCart = false;
-      const updatedCartItems = cartItems.filter(cartItem => cartItem.id !== item.id);
-      setCartItems(updatedCartItems);
-    }
+    const updatedCartItems = cartItems
+      .map((cartItem) => {
+        if (cartItem.id === item.id) {
+          const newCount = cartItem.count - 1;
+          if (newCount === 0) {
+            const animationTarget = document.getElementById(
+              `addButton${item.id}`
+            );
+            gsap.to(animationTarget, {
+              width: 131,
+              duration: 1,
+              ease: "power4",
+            });
+            const updatedShopItems = shopItems.map((shopItem) => {
+              if (shopItem.id === item.id) {
+                return { ...shopItem, inCart: false };
+              }
+              return shopItem;
+            });
+            setShopItems(updatedShopItems);
+            return null;
+          }
+          return { ...cartItem, count: newCount };
+        }
+        return cartItem;
+      })
+      .filter(Boolean);
+    setCartItems(updatedCartItems);
+    // Update cart items in localStorage
+    localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
   };
 
   const increment = (item) => {
-    item.count++;
+    const updatedCartItems = cartItems.map((cartItem) => {
+      if (cartItem.id === item.id) {
+        return { ...cartItem, count: cartItem.count + 1 };
+      }
+      return cartItem;
+    });
+    setCartItems(updatedCartItems);
+    // Update cart items in localStorage
+    localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
   };
+
+  const removeFromCart = (item) => {
+    const updatedCartItems = cartItems.filter(
+      (cartItem) => cartItem.id !== item.id
+    );
+    setCartItems(updatedCartItems);
+    // Update cart items in localStorage
+    localStorage.setItem("cartItems", JSON.stringify(updatedCartItems));
+  };
+
+  const totalPrice = cartItems.reduce((total, item) => {
+    return total + item.price * item.count;
+  }, 0);
 
   return (
     <div className="wrapper">
-      <div className="screen -left">
+      <div className="screen">
         <div className="app-bar">
-          <img className="logo" src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1315882/pngwave.png" alt="logo" />
+          <img className="logo" src="/img/nike.png" alt="logo" />
         </div>
-        <div className="title">Picked items</div>
+        <div className="title">Our Products</div>
         <div className="shop-items">
-          {shopItems.map(item => (
-            <div key={item.id} className="item-block">
-              <div className="image-area" style={{ backgroundColor: item.color }}>
-                <img className="image" src={item.image} alt={item.name} />
-              </div>
-              <div className="name">{item.name}</div>
-              <div className="description">{item.description}</div>
-              <div className="bottom-area">
-                <div className="price">${item.price}</div>
-                <div className={`button ${item.inCart ? '-active' : ''}`} onClick={() => addToCart(item)} ref={`addButton${item.id}`}>
-                  {!item.inCart ? 'ADD TO CART' : <div className="cover"><div className="check"></div></div>}
+          {shopItems.map((item) => (
+            <div key={item.id} className="item">
+              <div className="item-block">
+                <div
+                  className="image-area"
+                  style={{ backgroundColor: item.color }}
+                >
+                  <img className="image" src={item.image} alt={item.name} />
+                </div>
+                <div className="name">{item.name}</div>
+                <div className="description">{item.description}</div>
+                <div className="bottom-area">
+                  <div className="price">${item.price}</div>
+                  <div
+                    className={`button ${item.inCart ? "-active" : ""}`}
+                    onClick={() => addToCart(item)}
+                    id={`addButton${item.id}`}
+                  >
+                    {!item.inCart ? (
+                      "ADD TO CART"
+                    ) : (
+                      <div className="cover">
+                        <div className="check"></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-      <div className="screen -right" id="cartItems">
+      <div className="screen" id="cartItems">
         <div className="app-bar">
-          <img className="logo" src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1315882/pngwave.png" alt="logo" />
+          <img
+            className="logo"
+            src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1315882/pngwave.png"
+            alt="logo"
+          />
         </div>
-        <div className="title">Your cart</div>
-        {cartItems.length === 0 &&
+        <div className="title-container">
+          <div className="cart-title">Your cart</div>
+          <div className="total-price">${totalPrice.toFixed(2)}</div>
+        </div>
+        {cartItems.length === 0 && (
           <div className="no-content">
             <p className="text">Your cart is empty.</p>
           </div>
-        }
+        )}
         <div className="cart-items">
-          {cartItems.map(item => (
+          {cartItems.map((item) => (
             <div key={item.id} className="cart-item">
               <div className="left">
                 <div className="cart-image">
@@ -101,9 +183,19 @@ const App = () => {
                 <div className="name">{item.name}</div>
                 <div className="price">${item.price}</div>
                 <div className="count">
-                  <div className="button" onClick={() => decrement(item)}>&lt;</div>
+                  <div className="button" onClick={() => decrement(item)}>
+                    -
+                  </div>
                   <div className="number">{item.count}</div>
-                  <div className="button" onClick={() => increment(item)}>&gt;</div>
+                  <div className="button" onClick={() => increment(item)}>
+                    +
+                  </div>
+                  <div
+                    className="button yellow-button"
+                    onClick={() => removeFromCart(item)}
+                  >
+                    <img src="/img/trash.png" className="trash" alt="Remove" />
+                  </div>
                 </div>
               </div>
             </div>
