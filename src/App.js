@@ -9,10 +9,6 @@ const App = () => {
 
   useEffect(() => {
     // Retrieve cart items from localStorage when the component mounts
-    const storedCartItems = JSON.parse(localStorage.getItem("cartItems"));
-    if (storedCartItems) {
-      setCartItems(storedCartItems);
-    }
 
     // axios
     //   .get("/api/v1/products")
@@ -22,11 +18,20 @@ const App = () => {
     fetch("/data/shoes.json")
       .then((response) => response.json())
       .then((data) => {
-        setShopItems(data.shoes);
+        const updatedShopItems = data.shoes.map((item) => {
+          const inCart = storedCartItems ? storedCartItems.some((cartItem) => cartItem.id === item.id) : false;
+          return { ...item, inCart };
+        });
+        setShopItems(updatedShopItems); 
       })
       .catch((error) => {
         console.error("Error fetching products:", error);
       });
+
+    const storedCartItems = JSON.parse(localStorage.getItem("cartItems"));
+    if (storedCartItems) {
+      setCartItems(storedCartItems);
+    }
   }, []);
 
   const addToCart = (item) => {
@@ -100,6 +105,20 @@ const App = () => {
   };
 
   const removeFromCart = (item) => {
+    const animationTarget = document.getElementById(`addButton${item.id}`);
+    gsap.to(animationTarget, {
+      width: 131,
+      duration: 1,
+      ease: "power4",
+    });
+    const updatedShopItems = shopItems.map((shopItem) => {
+      if (shopItem.id === item.id) {
+        return { ...shopItem, inCart: false };
+      }
+      return shopItem;
+    });
+    setShopItems(updatedShopItems);
+
     const updatedCartItems = cartItems.filter(
       (cartItem) => cartItem.id !== item.id
     );
