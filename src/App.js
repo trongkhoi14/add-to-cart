@@ -20,7 +20,12 @@ const App = () => {
       .then((data) => {
         const updatedShopItems = data.shoes.map((item) => {
           const inCart = storedCartItems ? storedCartItems.some((cartItem) => cartItem.id === item.id) : false;
-          if(inCart) {
+          return { ...item, inCart };
+        });
+        setShopItems(updatedShopItems); 
+
+        updatedShopItems.forEach((item) => {
+          if (item.inCart) {
             const animationTarget = document.getElementById(`addButton${item.id}`);
             gsap.to(animationTarget, {
               width: 46,
@@ -28,9 +33,7 @@ const App = () => {
               ease: "power4",
             });
           }
-          return { ...item, inCart };
         });
-        setShopItems(updatedShopItems); 
       })
       .catch((error) => {
         console.error("Error fetching products:", error);
